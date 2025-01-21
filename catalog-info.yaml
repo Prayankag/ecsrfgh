@@ -1,0 +1,35 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: ecsrfgh
+  description: provision ECS using backstage
+spec:
+  owner: group:default/guests
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ecsrfgh
+  description: provision ECS using backstage
+  annotations:
+     backstage.io/techdocs-ref: dir:./docs
+     github.com/project-slug: prayankag/ecsrfgh/actions    
+spec:
+  type: service
+  owner: group:default/guests
+  lifecycle: experimental
+  system: ecsrfgh
+  providesApis:
+    - ecsrfgh
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: ecsrfgh
+  description: provision ECS using backstage
+spec:
+  type: internal
+  lifecycle: experimental
+  owner: group:default/guests
+  system: ecsrfgh
+  definition: "provision ECS using backstage"

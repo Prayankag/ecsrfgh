@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Page</title>
+    <script>
+        // JavaScript to automatically redirect after a short delay
+        setTimeout(function() {
+            window.location.href = "/app.js"; // Redirect to the route served by app.js
+        }, 3000); // Wait for 3 seconds before redirecting
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        p {
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hi, Welcome to the Node.js App!</h1>
+    <p>You will be redirected shortly...</p>
+</body>
+</html>

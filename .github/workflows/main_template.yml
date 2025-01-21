@@ -1,0 +1,124 @@
+name: Terraform and Dotnet Deployment Workflow
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main branch
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'region to deploy (e.g., us-east-1)'
+        required: true
+        type: string
+      ecrrepositoryname:
+        description: 'ecr repository name to deploy'
+        required: true
+        type: string
+      ecsclustername:
+        description: 'The ecs cluster name for deployment'
+        required: true
+        type: string
+      ecsservicename:
+        description: 'The ecs service name for deployment'
+        required: true
+        type: string
+      infraprovision:
+        description: 'Only perform an infrastructure provision'
+        required: true
+        type: boolean
+      ecsdeployment:
+        description: 'Only perform a ECSAPP deployment'
+        required: true
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Display input values for debugging
+  display-input-values:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Input Values
+        run: |
+          echo "Region: ${{ github.event.inputs.region }} "
+          echo "ECS repository name: ${{ github.event.inputs.ecrrepositoryname }}"
+          echo "ECS cluster Name: ${{ github.event.inputs.ecsclustername }}"
+          echo "ECS service name: ${{ github.event.inputs.ecsservicename }}"
+          echo "Infra Provision: ${{ github.event.inputs.infraprovision }}"
+          echo "ECS Deployment: ${{ github.event.inputs.ecsdeployment }}"
+  check-and-trigger-terraform-else-dotnet:
+    runs-on: ubuntu-latest
+    needs: display-input-values
+    steps:
+      - name: Check and Trigger Terraform Deployment else ecs deploy
+        id: terraform-deploy
+        env:
+          GIT_PAT: ${{ secrets.GIT_PAT }}
+          INFRA: ${{ github.event.inputs.infraprovision }}
+          ECSAPP: ${{ github.event.inputs.ecsdeployment }}
+        run: |
+          if [ "$INFRA" = "true" ]; then                  
+            echo "Triggering Terraform Deployment Workflow using REST API..."
+
+            # Trigger the workflow via GitHub API
+            curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GIT_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/terraform_deploy.yml/dispatches \
+              -d '{
+                "ref": "main",
+                "inputs": {
+                  "region": "${{ github.event.inputs.region }}",
+                  "ecrrepositoryname": "${{ github.event.inputs.ecrrepositoryname }}",
+                  "ecsclustername": "${{ github.event.inputs.ecsclustername }}",
+                  "ecsservicename": "${{ github.event.inputs.ecsservicename }}"
+                } 
+              }'
+          else
+            echo "ECSAPP deployment only"
+            echo "Triggering ECSAPP Deployment Workflow using REST API..."
+
+            # Trigger the workflow via GitHub API
+            curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GIT_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/ecs_deploy.yml/dispatches \
+              -d '{
+                "ref": "main",
+                "inputs": {
+                  "ecrrepositoryname": "${{ github.event.inputs.ecrrepositoryname }}",
+                  "ecsclustername": "${{ github.event.inputs.ecsclustername }}",
+                  "ecsservicename": "${{ github.event.inputs.ecsservicename }}"
+                }
+              }'
+          fi   
+  check-and-trigger-ecsdeploy-only:
+    runs-on: ubuntu-latest
+    needs: check-and-trigger-terraform-else-dotnet
+    steps:
+      - name: Check and Trigger Dotnet Deployment
+        id: ecs-deploy
+        env:
+          GIT_PAT: ${{ secrets.GIT_PAT }}
+          INFRA: ${{ github.event.inputs.infraprovision }}
+          ECSAPP: ${{ github.event.inputs.ecsdeployment }}
+        run: |
+          if [ "$INFRA" = "true" ] && [ "$ECSAPP" = "true" ]; then                  
+            echo "Triggering dotnet Deployment Workflow using REST API..."
+
+            # Trigger the workflow via GitHub API
+            curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GIT_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/ecs_deploy.yml/dispatches \
+              -d '{
+                "ref": "main",
+                "inputs": {
+                  "ecrrepositoryname": "${{ github.event.inputs.ecrrepositoryname }}",
+                  "ecsclustername": "${{ github.event.inputs.ecsclustername }}",
+                  "ecsservicename": "${{ github.event.inputs.ecsservicename }}"
+                }
+              }'
+          fi
